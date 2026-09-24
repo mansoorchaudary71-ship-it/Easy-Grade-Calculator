@@ -11,8 +11,8 @@ export const EducationalGuide: React.FC = () => {
   return (
     <section className="seo-content" aria-labelledby="page-content-title">
       <div className="seo-content-intro">
-        <div className="eyebrow">Grade guide</div>
-        <h1 id="page-content-title">Easy Grade Calculator</h1>
+        <span className="eyebrow">Grade guide</span>
+        <h2 id="page-content-title">Easy Grade Calculator Guide</h2>
         <p>
           Understand the math behind your result, then use the calculator above to plan your next move.
         </p>
@@ -70,7 +70,7 @@ export const EducationalGuide: React.FC = () => {
 
       <section className="seo-howto" aria-labelledby="how-to-title">
         <div className="seo-section-heading">
-          <div className="eyebrow">A quick walkthrough</div>
+          <span className="eyebrow">A quick walkthrough</span>
           <h2 id="how-to-title">How to Use This Calculator</h2>
         </div>
         <ol>
@@ -83,7 +83,7 @@ export const EducationalGuide: React.FC = () => {
 
       <section className="seo-about" aria-labelledby="about-tool-title">
         <div className="seo-section-heading">
-          <div className="eyebrow">Built for clear decisions</div>
+          <span className="eyebrow">Built for clear decisions</span>
           <h2 id="about-tool-title">About This Tool</h2>
         </div>
         <p>
@@ -96,7 +96,7 @@ export const EducationalGuide: React.FC = () => {
 
       <section className="seo-faq" aria-labelledby="faq-title">
         <div className="seo-section-heading">
-          <div className="eyebrow">Common questions</div>
+          <span className="eyebrow">Common questions</span>
           <h2 id="faq-title">Frequently Asked Questions</h2>
         </div>
         <div className="faq-list">

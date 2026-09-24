@@ -80,6 +80,27 @@ export const HistorySidePanel: React.FC<HistorySidePanelProps> = ({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showTrendChart, setShowTrendChart] = useState<boolean>(true);
 
+  // Handle ESC key and scroll lock
+  React.useEffect(() => {
+    if (!isSidePanelOpen) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeSidePanel();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isSidePanelOpen, closeSidePanel]);
+
   if (!isSidePanelOpen) return null;
 
   const hasAcademicHistory = history.some(

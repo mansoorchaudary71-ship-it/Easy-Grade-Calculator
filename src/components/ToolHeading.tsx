@@ -9,8 +9,8 @@ interface ToolHeadingProps {
 export const ToolHeading: React.FC<ToolHeadingProps> = ({ eyebrow, title, copy }) => {
   return (
     <section className="tool-heading">
-      <div className="eyebrow">{eyebrow}</div>
-      <div className="tool-title">{title}</div>
+      <span className="eyebrow">{eyebrow}</span>
+      <h1 className="tool-title">{title}</h1>
       <p>{copy}</p>
     </section>
   );

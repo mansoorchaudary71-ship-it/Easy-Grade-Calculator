@@ -28,9 +28,9 @@
   --destructive-foreground: 0 0% 100%;
 
   /* Typography tokens */
-  --app-font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --app-font-serif: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
-  --app-font-mono: "Roboto Mono", ui-monospace, SFMono-Regular, monospace;
+  --app-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --app-font-serif: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --app-font-mono: 'Inter', "Roboto Mono", ui-monospace, SFMono-Regular, monospace;
 
   /* Modern Elevation Tokens */
   --shadow-subtle: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
@@ -201,16 +201,26 @@ html {
 }
 
 body {
-  margin: 0;
-  padding: 0;
-  font-family: var(--app-font-sans);
-  background: hsl(var(--background));
-  color: hsl(var(--foreground));
+  font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+  padding: 0;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
   line-height: 1.6;
   letter-spacing: -0.01em;
   transition: background-color var(--duration-normal) var(--ease-spring), color var(--duration-normal) var(--ease-spring);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+  color: hsl(var(--foreground));
 }
 
 .app-shell {
@@ -505,24 +515,38 @@ body {
 .eyebrow {
   color: hsl(var(--tool-primary, var(--primary)));
   text-transform: uppercase;
-  font: 700 11px/1 var(--app-font-mono);
-  letter-spacing: 0.12em;
+  font: 700 11px/1.2 var(--app-font-mono);
+  letter-spacing: 0.14em;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
-  padding: 4px 10px;
-  border-radius: 9999px;
-  background: hsl(var(--tool-soft, var(--secondary)) / 0.7);
-  border: 1px solid hsl(var(--tool-primary) / 0.15);
+  margin-bottom: 10px;
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+.eyebrow::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.75;
 }
 
 .tool-heading .tool-title {
   max-width: 740px;
-  color: hsl(var(--foreground));
-  font: 800 clamp(36px, 5vw, 56px)/1.08 var(--app-font-serif);
+  color: #1f2937;
+  font: 700 clamp(36px, 5vw, 56px)/1.08 var(--app-font-serif);
   letter-spacing: -0.04em;
   margin: 10px 0 14px;
+  text-wrap: balance;
+}
+
+.dark .tool-heading .tool-title {
+  color: hsl(var(--foreground));
 }
 
 .tool-heading .tool-title em {
@@ -575,8 +599,12 @@ body {
   letter-spacing: -0.025em;
   margin: 0;
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 700;
   font-family: var(--app-font-serif);
+  color: #1f2937;
+}
+
+.dark .panel-title {
   color: hsl(var(--foreground));
 }
 
@@ -673,6 +701,7 @@ body {
   outline: none;
   padding: 9px 12px;
   font-size: 13.5px;
+  font-weight: 500;
   width: 100%;
   min-height: 40px;
   transition: all var(--duration-fast) var(--ease-spring);
@@ -699,7 +728,8 @@ body {
 
 .field-input[type="number"],
 .tool-input[type="number"] {
-  font-family: var(--app-font-mono);
+  font-family: var(--app-font-sans);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
@@ -886,8 +916,8 @@ body {
 }
 
 .result-percent {
-  font: 800 clamp(54px, 6.5vw, 84px)/0.96 var(--app-font-serif);
-  letter-spacing: -0.05em;
+  font: 600 clamp(54px, 6.5vw, 84px)/0.96 'Inter', sans-serif;
+  letter-spacing: -0.04em;
   margin: 18px 0 8px;
   color: hsl(var(--foreground));
   font-variant-numeric: tabular-nums;
@@ -1133,7 +1163,7 @@ body {
 }
 
 .what-if-result strong {
-  font: 800 24px/1 var(--app-font-serif);
+  font: 600 24px/1 'Inter', sans-serif;
   color: hsl(var(--foreground));
   font-variant-numeric: tabular-nums;
 }
@@ -1426,8 +1456,8 @@ body {
 }
 
 .tool-big-number {
-  font: 800 clamp(42px, 5.5vw, 68px)/0.96 var(--app-font-serif);
-  letter-spacing: -0.05em;
+  font: 600 clamp(42px, 5.5vw, 68px)/0.96 'Inter', sans-serif;
+  letter-spacing: -0.04em;
   margin: 18px 0 12px;
   color: hsl(var(--foreground));
   font-variant-numeric: tabular-nums;
@@ -1580,8 +1610,8 @@ body {
 
 .answer-strip strong {
   color: hsl(var(--foreground));
-  font: 800 clamp(36px, 5vw, 54px)/1 var(--app-font-serif);
-  letter-spacing: -0.05em;
+  font: 600 clamp(36px, 5vw, 54px)/1 'Inter', sans-serif;
+  letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1752,10 +1782,14 @@ body {
 }
 
 .seo-content-intro h1 {
-  color: hsl(var(--foreground));
-  font: 800 clamp(32px, 4.5vw, 48px)/1.08 var(--app-font-serif);
+  color: #1f2937;
+  font: 700 clamp(32px, 4.5vw, 48px)/1.08 'Inter', sans-serif;
   letter-spacing: -0.04em;
   margin: 14px 0 12px;
+}
+
+.dark .seo-content-intro h1 {
+  color: hsl(var(--foreground));
 }
 
 .seo-content-intro p {
@@ -1782,21 +1816,32 @@ body {
 .seo-faq h2,
 .seo-howto h2,
 .seo-about h2 {
-  color: hsl(var(--foreground));
+  color: #1f2937;
   letter-spacing: -0.035em;
   margin: 0 0 16px;
   font-size: 22px;
-  font-weight: 800;
-  font-family: var(--app-font-serif);
+  font-weight: 700;
+  font-family: 'Inter', sans-serif;
+}
+
+.dark .seo-article h2,
+.dark .seo-faq h2,
+.dark .seo-howto h2,
+.dark .seo-about h2 {
+  color: hsl(var(--foreground));
 }
 
 .seo-article h3 {
-  color: hsl(var(--foreground));
+  color: #1f2937;
   letter-spacing: -0.02em;
   margin: 26px 0 10px;
   font-size: 16.5px;
   font-weight: 700;
-  font-family: var(--app-font-serif);
+  font-family: 'Inter', sans-serif;
+}
+
+.dark .seo-article h3 {
+  color: hsl(var(--foreground));
 }
 
 .seo-article p,
@@ -1918,21 +1963,24 @@ body {
 /* Toast Floating Notification */
 .toast {
   position: fixed;
-  bottom: 28px;
-  right: 28px;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 1200;
   background: hsl(var(--card));
   color: hsl(var(--foreground));
   box-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.1);
   border: 1px solid hsl(var(--border));
-  border-radius: 12px;
+  border-radius: 9999px;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 18px;
-  font-size: 12.5px;
+  padding: 10px 20px;
+  font-size: 13px;
   font-weight: 600;
   animation: var(--duration-normal) var(--ease-spring) toast-in;
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 .toast svg {
@@ -1945,11 +1993,11 @@ body {
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateY(12px) scale(0.96);
+    transform: translate(-50%, 14px) scale(0.96);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate(-50%, 0) scale(1);
   }
 }
 
@@ -2757,8 +2805,39 @@ body {
 }
 
 @media (max-width: 640px) {
+  .topbar-inner {
+    padding: 0 14px;
+    height: 56px;
+  }
+
+  .theme-toggle-label {
+    display: none;
+  }
+
+  .history-nav-trigger span:not(.history-badge-count) {
+    display: none;
+  }
+
+  .theme-toggle-btn,
+  .history-nav-trigger {
+    padding: 6px 10px;
+    min-height: 36px;
+  }
+
+  .tool-nav-inner {
+    padding: 6px 14px;
+    gap: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tool-nav-item {
+    padding: 6px 11px;
+    font-size: 12px;
+  }
+
   .tool-heading .tool-title {
-    font-size: 36px;
+    font-size: 32px;
+    letter-spacing: -0.03em;
   }
 
   .tool-form-grid {
@@ -2796,6 +2875,13 @@ body {
     right: 20px;
     padding: 9px 15px;
     font-size: 12px;
+  }
+
+  .toast {
+    max-width: calc(100vw - 32px);
+    font-size: 12px;
+    padding: 8px 16px;
+    bottom: 20px;
   }
 }
 
