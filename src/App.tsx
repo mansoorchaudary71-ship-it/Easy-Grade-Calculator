@@ -1,7 +1,8 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { Navbar } from './components/Navbar';
 import { GradeCalculator } from './components/GradeCalculator';
 import { Toast } from './components/Toast';
+import { CommandPalette } from './components/CommandPalette';
 import { HistoryProvider, useHistory } from './context/HistoryContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { TOOLS_LIST } from './data/constants';
@@ -51,6 +52,7 @@ function AppMain() {
   const { isSidePanelOpen } = useHistory();
   const [activeTool, setActiveTool] = useState<ToolKey>('quick');
   const [toastMessage, setToastMessage] = useState<string>('');
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
 
   // Auto-dismiss toast after 2.6 seconds
   useEffect(() => {
@@ -61,13 +63,52 @@ function AppMain() {
     return () => window.clearTimeout(timer);
   }, [toastMessage]);
 
+  // Global keyboard shortcut listener for Ctrl+K, Cmd+K, and '/'
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Cmd+K on Mac, Ctrl+K on Windows/Linux
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsCommandPaletteOpen((prev) => !prev);
+        return;
+      }
+
+      // '/' shortcut to quickly open search if not focused in an input/textarea
+      if (e.key === '/' && !isCommandPaletteOpen) {
+        const target = e.target as HTMLElement | null;
+        const isInput =
+          target &&
+          (target.tagName === 'INPUT' ||
+            target.tagName === 'TEXTAREA' ||
+            target.tagName === 'SELECT' ||
+            target.isContentEditable);
+        if (!isInput) {
+          e.preventDefault();
+          setIsCommandPaletteOpen(true);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [isCommandPaletteOpen]);
+
+  const handleSelectTool = useCallback((tool: ToolKey) => {
+    setActiveTool(tool);
+  }, []);
+
   const currentToolDef =
     TOOLS_LIST.find((t) => t.key === activeTool) ?? TOOLS_LIST[0];
   const CurrentIcon = currentToolDef.icon;
 
   return (
     <div className={`app-shell tool-theme-${activeTool}`}>
-      <Navbar activeTool={activeTool} onSelectTool={setActiveTool} />
+      <Navbar
+        activeTool={activeTool}
+        onSelectTool={handleSelectTool}
+        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+      />
 
       <main className={`main-wrap tool-theme-${activeTool}`}>
         <div key={activeTool} className="tool-transition-container">
@@ -87,7 +128,17 @@ function AppMain() {
         <div className="active-tool-footnote">
           <CurrentIcon aria-hidden="true" />
           <span>
-            You&apos;re using <strong>{currentToolDef.label}</strong>. Switch tools anytime from the navigation above.
+            You&apos;re using <strong>{currentToolDef.label}</strong>. Press{' '}
+            <button
+              type="button"
+              className="footnote-shortcut-btn"
+              onClick={() => setIsCommandPaletteOpen(true)}
+              aria-label="Open command palette"
+              title="Open command palette"
+            >
+              <kbd>Ctrl+K</kbd>
+            </button>{' '}
+            or switch tools anytime from the navigation.
           </span>
         </div>
 
@@ -98,9 +149,18 @@ function AppMain() {
 
       {isSidePanelOpen && (
         <Suspense fallback={null}>
-          <HistorySidePanel setToast={setToastMessage} onSelectTool={setActiveTool} />
+          <HistorySidePanel setToast={setToastMessage} onSelectTool={handleSelectTool} />
         </Suspense>
       )}
+
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        activeTool={activeTool}
+        onSelectTool={handleSelectTool}
+        setToast={setToastMessage}
+      />
+
       <FloatingHistoryTrigger />
       <Toast message={toastMessage} />
     </div>

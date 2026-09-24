@@ -1,5 +1,5 @@
-import React from 'react';
-import { Sparkles, History, Sun, Moon, Laptop } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Sparkles, History, Sun, Moon, Laptop, Search } from 'lucide-react';
 import { TOOLS_LIST } from '../data/constants';
 import { ToolKey } from '../types';
 import { useHistory } from '../context/HistoryContext';
@@ -8,11 +8,23 @@ import { useTheme } from '../context/ThemeContext';
 interface NavbarProps {
   activeTool: ToolKey;
   onSelectTool: (tool: ToolKey) => void;
+  onOpenCommandPalette: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ activeTool, onSelectTool }) => {
+export const Navbar: React.FC<NavbarProps> = ({
+  activeTool,
+  onSelectTool,
+  onOpenCommandPalette,
+}) => {
   const { history, toggleSidePanel } = useHistory();
   const { theme, resolvedTheme, setTheme } = useTheme();
+
+  const isMac = useMemo(() => {
+    return (
+      typeof navigator !== 'undefined' &&
+      /Mac|iPod|iPhone|iPad/i.test(navigator.userAgent || '')
+    );
+  }, []);
 
   const cycleTheme = () => {
     if (theme === 'system') {
@@ -40,6 +52,21 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTool, onSelectTool }) => {
         </button>
 
         <div className="topbar-right">
+          {/* Quick Command Palette Trigger */}
+          <button
+            type="button"
+            className="command-nav-trigger"
+            onClick={onOpenCommandPalette}
+            aria-label={`Open calculator search and command palette (${isMac ? '⌘K' : 'Ctrl+K'})`}
+            title={`Switch calculators with Command Palette (${isMac ? '⌘K' : 'Ctrl+K'})`}
+          >
+            <Search aria-hidden="true" />
+            <span className="command-nav-label">Search calculators...</span>
+            <kbd className="command-nav-kbd">
+              <span>{isMac ? '⌘' : 'Ctrl+'}</span>K
+            </kbd>
+          </button>
+
           <div className="topbar-note">
             <span className="pulse-dot" aria-hidden="true" />
             <span>Local &amp; private</span>
