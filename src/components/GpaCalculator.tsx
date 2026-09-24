@@ -4,15 +4,18 @@ import { ToolHeading } from './ToolHeading';
 import { GRADE_POINT_MAP, INITIAL_COURSES } from '../data/constants';
 import { CourseItem } from '../types';
 import { parseNumber } from '../utils/formatters';
-import { exportGpaReportPdf } from '../utils/pdfExport';
 import { useHistory } from '../context/HistoryContext';
+
+const CalculationTrendChart = React.lazy(() =>
+  import('./CalculationTrendChart').then((m) => ({ default: m.CalculationTrendChart }))
+);
 
 interface GpaCalculatorProps {
   setToast?: (msg: string) => void;
 }
 
 export const GpaCalculator: React.FC<GpaCalculatorProps> = ({ setToast }) => {
-  const { addHistoryItem } = useHistory();
+  const { addHistoryItem, history } = useHistory();
   const [courses, setCourses] = useState<CourseItem[]>(INITIAL_COURSES);
 
   const totalCredits = courses.reduce(
@@ -164,6 +167,12 @@ export const GpaCalculator: React.FC<GpaCalculatorProps> = ({ setToast }) => {
                   title: 'GPA Calculation',
                   value: `${currentGpa.toFixed(2)} / 4.0`,
                   subtitle: `${courses.length} courses · ${totalCredits.toFixed(1)} credits`,
+                  details: {
+                    score: Number(currentGpa.toFixed(2)),
+                    gpa: Number(currentGpa.toFixed(2)),
+                    credits: totalCredits,
+                    coursesCount: courses.length,
+                  },
                 });
                 setToast?.('GPA calculation saved to history.');
               }}
@@ -175,8 +184,9 @@ export const GpaCalculator: React.FC<GpaCalculatorProps> = ({ setToast }) => {
               type="button"
               className="result-action result-action-highlight"
               style={{ width: '100%' }}
-              onClick={() => {
+              onClick={async () => {
                 try {
+                  const { exportGpaReportPdf } = await import('../utils/pdfExport');
                   exportGpaReportPdf({
                     gpa: currentGpa,
                     totalCredits,
@@ -187,6 +197,12 @@ export const GpaCalculator: React.FC<GpaCalculatorProps> = ({ setToast }) => {
                     title: 'GPA Transcript Export',
                     value: `${currentGpa.toFixed(2)} / 4.0`,
                     subtitle: `${courses.length} courses · ${totalCredits.toFixed(1)} credits`,
+                    details: {
+                      score: Number(currentGpa.toFixed(2)),
+                      gpa: Number(currentGpa.toFixed(2)),
+                      credits: totalCredits,
+                      coursesCount: courses.length,
+                    },
                   });
                   setToast?.('GPA PDF transcript generated and downloaded.');
                 } catch {
@@ -198,6 +214,17 @@ export const GpaCalculator: React.FC<GpaCalculatorProps> = ({ setToast }) => {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* GPA Fluctuation Trend Analytics */}
+      <div style={{ marginTop: '28px' }}>
+        <React.Suspense fallback={<div style={{ height: '240px' }} />}>
+          <CalculationTrendChart
+            history={history}
+            defaultView="gpa"
+            height={240}
+          />
+        </React.Suspense>
       </div>
     </>
   );

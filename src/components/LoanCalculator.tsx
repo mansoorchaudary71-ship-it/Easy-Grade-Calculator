@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { FileDown, History } from 'lucide-react';
 import { ToolHeading } from './ToolHeading';
 import { formatCurrency, parseNumber } from '../utils/formatters';
-import { exportLoanReportPdf } from '../utils/pdfExport';
 import { useHistory } from '../context/HistoryContext';
 
 interface PaymentResultCardProps {
@@ -86,8 +85,9 @@ export const PaymentResultCard: React.FC<PaymentResultCardProps> = ({
           type="button"
           className="result-action result-action-highlight"
           style={{ width: '100%' }}
-          onClick={() => {
+          onClick={async () => {
             try {
+              const { exportLoanReportPdf } = await import('../utils/pdfExport');
               exportLoanReportPdf({
                 title,
                 principal,

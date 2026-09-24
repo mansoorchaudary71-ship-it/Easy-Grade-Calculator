@@ -14,13 +14,13 @@
   --secondary: 220 14% 95%;
   --secondary-foreground: 222 47% 16%;
   --muted: 220 14% 94%;
-  --muted-foreground: 220 9% 46%;
+  --muted-foreground: 220 14% 38%;
   --popover: 0 0% 100%;
   --popover-foreground: 222 47% 11%;
   --popover-border: 220 14% 91%;
 
   /* 10% High-Contrast Brand Accent */
-  --primary: 168 80% 32%;
+  --primary: 168 85% 23%;
   --primary-foreground: 0 0% 100%;
   --accent: 38 92% 50%;
   --accent-foreground: 0 0% 100%;
@@ -43,9 +43,9 @@
   --duration-fast: 160ms;
   --duration-normal: 220ms;
 
-  /* Default tool theme (quick grade) */
-  --tool-primary: 168 80% 32%;
-  --tool-deep: 172 82% 26%;
+  /* Default tool theme (quick grade) - optimized for WCAG AA/AAA */
+  --tool-primary: 168 85% 23%;
+  --tool-deep: 172 85% 18%;
   --tool-soft: 168 50% 93%;
   --tool-accent: 38 92% 50%;
   --tool-on-primary: 0 0% 100%;
@@ -1739,6 +1739,8 @@ body {
 
 /* Educational SEO Guide Section */
 .seo-content {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 3000px;
   border-top: 1px solid hsl(var(--border) / 0.8);
   max-width: 960px;
   margin: 80px auto 0;
@@ -2038,6 +2040,29 @@ body {
 @keyframes history-slide-left {
   from { transform: translateX(100%); }
   to { transform: translateX(0); }
+}
+
+@keyframes tool-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tool-transition-container {
+  animation: tool-fade-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: opacity, transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tool-transition-container {
+    animation: none !important;
+    transform: none !important;
+  }
 }
 
 .history-drawer-header {
@@ -2386,6 +2411,331 @@ body {
   font-size: 11px;
   color: hsl(var(--muted-foreground));
   text-align: center;
+}
+
+/* Calculation Trend Chart Styles (Recharts Integration) */
+.trend-chart-card {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--card-border) / 0.85);
+  box-shadow: var(--shadow-card);
+  border-radius: 18px;
+  padding: 20px 22px;
+  position: relative;
+  overflow: hidden;
+  transition: all var(--duration-normal) var(--ease-spring);
+}
+
+.trend-chart-card.is-compact {
+  padding: 16px 18px;
+  border-radius: 16px;
+}
+
+.trend-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.trend-header-main {
+  display: grid;
+  gap: 3px;
+}
+
+.trend-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trend-spark-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: hsl(var(--tool-primary) / 0.12);
+  color: hsl(var(--tool-primary));
+  display: grid;
+  place-items: center;
+}
+
+.trend-spark-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.trend-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: hsl(var(--foreground));
+  font-family: var(--app-font-serif);
+  letter-spacing: -0.025em;
+}
+
+.trend-subtitle {
+  margin: 0;
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+}
+
+.trend-pill-tabs {
+  background: hsl(var(--secondary));
+  border: 1px solid hsl(var(--border) / 0.7);
+  border-radius: 9999px;
+  padding: 3px;
+  display: flex;
+  gap: 2px;
+}
+
+.trend-pill-btn {
+  background: transparent;
+  border: 0;
+  border-radius: 9999px;
+  color: hsl(var(--muted-foreground));
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-spring);
+}
+
+.trend-pill-btn:hover {
+  color: hsl(var(--foreground));
+}
+
+.trend-pill-btn[data-active="true"] {
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  font-weight: 700;
+}
+
+/* KPI Bar */
+.trend-kpi-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  background: hsl(var(--secondary) / 0.45);
+  border: 1px solid hsl(var(--border) / 0.6);
+  border-radius: 12px;
+}
+
+@media (max-width: 600px) {
+  .trend-kpi-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.trend-kpi-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.trend-kpi-label {
+  font-size: 10.5px;
+  color: hsl(var(--muted-foreground));
+  font-family: var(--app-font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.trend-kpi-val {
+  font-size: 16px;
+  font-weight: 800;
+  color: hsl(var(--foreground));
+  font-family: var(--app-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.trend-kpi-val.highlight {
+  color: hsl(var(--tool-primary));
+}
+
+.trend-delta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--app-font-mono);
+  line-height: 1.2;
+}
+
+.trend-delta-badge svg {
+  width: 14px;
+  height: 14px;
+}
+
+.trend-delta-badge.is-up {
+  color: #047857;
+}
+
+.dark .trend-delta-badge.is-up {
+  color: #34d399;
+}
+
+.trend-delta-badge.is-down {
+  color: #ef4444;
+}
+
+.trend-delta-badge.is-flat {
+  color: hsl(var(--muted-foreground));
+}
+
+/* Chart Canvas */
+.trend-canvas-container {
+  width: 100%;
+  position: relative;
+}
+
+.trend-insufficient-data {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: hsl(var(--secondary) / 0.35);
+  border: 1px dashed hsl(var(--border));
+  border-radius: 12px;
+  padding: 20px;
+  text-align: left;
+}
+
+.trend-insufficient-data svg {
+  width: 24px;
+  height: 24px;
+  color: hsl(var(--tool-primary));
+  flex-shrink: 0;
+}
+
+.trend-insufficient-data strong {
+  display: block;
+  font-size: 13px;
+  color: hsl(var(--foreground));
+}
+
+.trend-insufficient-data p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+}
+
+/* Empty State */
+.trend-chart-empty {
+  background: hsl(var(--card));
+  border: 1px dashed hsl(var(--border));
+  border-radius: 16px;
+  padding: 24px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.trend-empty-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: hsl(var(--secondary));
+  color: hsl(var(--tool-primary));
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.trend-empty-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.trend-empty-content h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: hsl(var(--foreground));
+  font-family: var(--app-font-serif);
+}
+
+.trend-empty-content p {
+  margin: 0;
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+  line-height: 1.5;
+}
+
+/* Tooltip */
+.trend-tooltip-card {
+  background: hsl(var(--card) / 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
+  padding: 10px 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  min-width: 140px;
+}
+
+.trend-tooltip-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.trend-tooltip-badge {
+  font-size: 9.5px;
+  font-weight: 800;
+  font-family: var(--app-font-mono);
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: hsl(var(--tool-primary) / 0.15);
+  color: hsl(var(--tool-primary));
+}
+
+.trend-tooltip-date {
+  font-size: 10.5px;
+  color: hsl(var(--muted-foreground));
+  font-family: var(--app-font-mono);
+}
+
+.trend-tooltip-score {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.trend-tooltip-score strong {
+  font-size: 18px;
+  font-weight: 800;
+  color: hsl(var(--foreground));
+  font-family: var(--app-font-mono);
+}
+
+.trend-tooltip-letter {
+  font-size: 11px;
+  font-weight: 800;
+  background: hsl(var(--secondary));
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: hsl(var(--tool-primary));
+}
+
+.trend-tooltip-denom {
+  font-size: 11px;
+  color: hsl(var(--muted-foreground));
+  font-family: var(--app-font-mono);
+}
+
+.trend-tooltip-sub {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: hsl(var(--muted-foreground));
+  line-height: 1.3;
 }
 
 /* Mobile & Responsive Layout */

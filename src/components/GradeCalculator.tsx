@@ -28,15 +28,19 @@ import {
   getLetterFromPercent,
   parseNumber,
 } from '../utils/formatters';
-import { exportGradeReportPdf } from '../utils/pdfExport';
 import { useHistory } from '../context/HistoryContext';
+
+const CalculationTrendChart = React.lazy(() =>
+  import('./CalculationTrendChart').then((m) => ({ default: m.CalculationTrendChart }))
+);
 
 interface GradeCalculatorProps {
   setToast: (msg: string) => void;
 }
 
 export const GradeCalculator: React.FC<GradeCalculatorProps> = ({ setToast }) => {
-  const { addHistoryItem } = useHistory();
+  const { addHistoryItem, history: unifiedHistory } = useHistory();
+  const [historyView, setHistoryView] = useState<'chart' | 'list'>('list');
   const [courseName, setCourseName] = useState<string>('Biology 101');
   const [studentName, setStudentName] = useState<string>('');
   const [showPdfMeta, setShowPdfMeta] = useState<boolean>(false);
@@ -191,6 +195,13 @@ export const GradeCalculator: React.FC<GradeCalculatorProps> = ({ setToast }) =>
       title: 'Grade Calculation',
       value: `${finalPercent.toFixed(1)}% (${finalLetter})`,
       subtitle: `${courseName || 'Course'} · ${mode === 'weighted' ? 'Weighted' : 'Points'} mode · ${assessments.length} assessments`,
+      details: {
+        score: Number(finalPercent.toFixed(1)),
+        letter: finalLetter,
+        mode,
+        assessmentsCount: assessments.length,
+        courseName: courseName || 'General Course',
+      },
     });
 
     setToast('Calculation saved to your recent history.');
@@ -256,13 +267,14 @@ export const GradeCalculator: React.FC<GradeCalculatorProps> = ({ setToast }) =>
     }
   };
 
-  const handleExportPdf = () => {
+  const handleExportPdf = async () => {
     if (hasAnyErrors) {
       setToast('Check the highlighted assessment rows before exporting.');
       return;
     }
 
     try {
+      const { exportGradeReportPdf } = await import('../utils/pdfExport');
       exportGradeReportPdf({
         courseName: courseName.trim() || 'Coursework',
         studentName: studentName.trim() || undefined,
@@ -601,28 +613,62 @@ export const GradeCalculator: React.FC<GradeCalculatorProps> = ({ setToast }) =>
 
       {/* Below Grid: History & Grading Scale */}
       <section className="below-grid">
-        {/* Recent Calculations History */}
+        {/* Recent Calculations History & Trend Visualizer */}
         <div className="tool-card history-panel">
-          <div className="history-head">
+          <div className="history-head" style={{ flexWrap: 'wrap', gap: '12px' }}>
             <div>
-              <h2 className="panel-title">Recent calculations</h2>
-              <p className="panel-subtitle">A small trail of where you have been.</p>
+              <h2 className="panel-title">Calculation Trend & History</h2>
+              <p className="panel-subtitle">Visual fluctuation of your grade averages over time.</p>
             </div>
-            {history.length > 0 && (
-              <button
-                type="button"
-                className="history-clear"
-                onClick={() => {
-                  setHistory([]);
-                  setToast('Recent calculations cleared.');
-                }}
-              >
-                Clear all
-              </button>
-            )}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="mode-switch">
+                <button
+                  type="button"
+                  data-active={historyView === 'chart'}
+                  onClick={() => setHistoryView('chart')}
+                >
+                  Trend Chart
+                </button>
+                <button
+                  type="button"
+                  data-active={historyView === 'list'}
+                  onClick={() => setHistoryView('list')}
+                >
+                  List
+                </button>
+              </div>
+
+              {history.length > 0 && historyView === 'list' && (
+                <button
+                  type="button"
+                  className="history-clear"
+                  onClick={() => {
+                    setHistory([]);
+                    setToast('Recent calculations cleared.');
+                  }}
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
           </div>
 
-          {history.length === 0 ? (
+          {historyView === 'chart' ? (
+            <React.Suspense
+              fallback={
+                <div style={{ height: '230px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: '13px', color: 'hsl(var(--muted-foreground))' }}>Loading trajectory chart...</span>
+                </div>
+              }
+            >
+              <CalculationTrendChart
+                history={unifiedHistory}
+                defaultView="grade"
+                height={230}
+              />
+            </React.Suspense>
+          ) : history.length === 0 ? (
             <div className="empty-history">
               <History aria-hidden="true" />
               <p>

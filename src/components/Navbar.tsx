@@ -68,7 +68,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTool, onSelectTool }) => {
             type="button"
             className="history-nav-trigger"
             onClick={toggleSidePanel}
-            aria-label="Open calculation history side panel"
+            aria-label="History - Open calculation history side panel"
           >
             <History aria-hidden="true" />
             <span>History</span>

@@ -11,9 +11,16 @@ import {
   Banknote,
   House,
   KeyRound,
+  TrendingUp,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { useHistory } from '../context/HistoryContext';
 import { ToolKey, UnifiedHistoryItem } from '../types';
+
+const CalculationTrendChart = React.lazy(() =>
+  import('./CalculationTrendChart').then((m) => ({ default: m.CalculationTrendChart }))
+);
 
 interface HistorySidePanelProps {
   setToast: (msg: string) => void;
@@ -71,8 +78,13 @@ export const HistorySidePanel: React.FC<HistorySidePanelProps> = ({
 
   const [activeFilter, setActiveFilter] = useState<'all' | ToolKey>('all');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showTrendChart, setShowTrendChart] = useState<boolean>(true);
 
   if (!isSidePanelOpen) return null;
+
+  const hasAcademicHistory = history.some(
+    (item) => item.type === 'quick' || item.type === 'gpa'
+  );
 
   const filteredHistory = activeFilter === 'all'
     ? history
@@ -168,6 +180,83 @@ export const HistorySidePanel: React.FC<HistorySidePanelProps> = ({
 
         {/* List Content */}
         <div className="history-drawer-content">
+          {/* Visual Trend Chart Section */}
+          {hasAcademicHistory && (activeFilter === 'all' || activeFilter === 'quick' || activeFilter === 'gpa') && (
+            <div style={{ marginBottom: '20px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '8px',
+                  padding: '0 4px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <TrendingUp
+                    style={{ width: '14px', height: '14px', color: 'hsl(var(--tool-primary))' }}
+                    aria-hidden="true"
+                  />
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      fontFamily: 'var(--app-font-mono)',
+                      color: 'hsl(var(--muted-foreground))',
+                    }}
+                  >
+                    Trajectory Trend
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowTrendChart(!showTrendChart)}
+                  style={{
+                    background: 'transparent',
+                    border: 0,
+                    color: 'hsl(var(--muted-foreground))',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    cursor: 'pointer',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                  }}
+                  aria-expanded={showTrendChart}
+                >
+                  {showTrendChart ? (
+                    <>
+                      Hide Chart <ChevronUp style={{ width: '13px', height: '13px' }} />
+                    </>
+                  ) : (
+                    <>
+                      Show Chart <ChevronDown style={{ width: '13px', height: '13px' }} />
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {showTrendChart && (
+                <CalculationTrendChart
+                  history={history}
+                  defaultView={activeFilter === 'gpa' ? 'gpa' : 'grade'}
+                  height={190}
+                  compact
+                  onSelectCalculation={(item) => {
+                    if (onSelectTool) {
+                      onSelectTool(item.type);
+                      closeSidePanel();
+                    }
+                  }}
+                />
+              )}
+            </div>
+          )}
+
           {filteredHistory.length === 0 ? (
             <div className="history-empty-state">
               <div className="history-empty-icon">
