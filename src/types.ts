@@ -33,6 +33,7 @@ export interface GradeHistoryItem {
   mode: CalculationMode;
   count: number;
   createdAt: string;
+  targetGrade?: number;
 }
 
 export interface CourseItem {

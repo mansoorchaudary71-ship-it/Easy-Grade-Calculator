@@ -9,6 +9,11 @@ import {
   History,
   X,
   FileText,
+  Target,
+  TrendingUp,
+  TrendingDown,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 import { ToolHeading } from './ToolHeading';
 import {
@@ -29,10 +34,21 @@ import {
   parseNumber,
 } from '../utils/formatters';
 import { useHistory } from '../context/HistoryContext';
+import { motion, AnimatePresence } from 'motion/react';
+import { AnimatedCounter } from './AnimatedCounter';
 
 const CalculationTrendChart = React.lazy(() =>
   import('./CalculationTrendChart').then((m) => ({ default: m.CalculationTrendChart }))
 );
+
+const TARGET_PRESETS = [
+  { label: 'A (93%)', value: '93' },
+  { label: 'A- (90%)', value: '90' },
+  { label: 'B+ (87%)', value: '87' },
+  { label: 'B (83%)', value: '83' },
+  { label: 'B- (80%)', value: '80' },
+  { label: 'C (75%)', value: '75' },
+];
 
 interface GradeCalculatorProps {
   setToast: (msg: string) => void;
@@ -52,6 +68,8 @@ export const GradeCalculator: React.FC<GradeCalculatorProps> = ({ setToast }) =>
     percent: 87.7,
     letter: 'B',
   });
+  const [targetGrade, setTargetGrade] = useState<string>('90');
+  const [upcomingName, setUpcomingName] = useState<string>('Upcoming Exam');
   const [whatIfEarned, setWhatIfEarned] = useState<string>('95');
   const [whatIfPossible, setWhatIfPossible] = useState<string>('100');
   const [whatIfWeight, setWhatIfWeight] = useState<string>('15');
@@ -161,6 +179,8 @@ export const GradeCalculator: React.FC<GradeCalculatorProps> = ({ setToast }) =>
     setAssessments(INITIAL_ASSESSMENTS.map((item) => ({ ...item })));
     setMode('points');
     setCurrentGrade({ percent: 87.7, letter: 'B' });
+    setTargetGrade('90');
+    setUpcomingName('Upcoming Exam');
     setWhatIfEarned('95');
     setWhatIfPossible('100');
     setWhatIfWeight('15');
@@ -176,6 +196,8 @@ export const GradeCalculator: React.FC<GradeCalculatorProps> = ({ setToast }) =>
     const finalPercent = calculateResult(validatedAssessments);
     const finalLetter = getLetterFromPercent(finalPercent, scale);
     const resultObj = { percent: finalPercent, letter: finalLetter };
+    const parsedTarget = parseNumber(targetGrade);
+    const validTarget = targetGrade.trim() !== '' && !isNaN(parsedTarget) && parsedTarget > 0 ? parsedTarget : undefined;
 
     setCurrentGrade(resultObj);
     setHistory((prev) => [
@@ -186,6 +208,7 @@ export const GradeCalculator: React.FC<GradeCalculatorProps> = ({ setToast }) =>
         mode,
         count: assessments.length,
         createdAt: new Date().toISOString(),
+        targetGrade: validTarget,
       },
       ...prev.slice(0, 7),
     ]);
@@ -201,11 +224,23 @@ export const GradeCalculator: React.FC<GradeCalculatorProps> = ({ setToast }) =>
         mode,
         assessmentsCount: assessments.length,
         courseName: courseName || 'General Course',
+        targetGrade: validTarget,
       },
     });
 
     setToast('Calculation saved to your recent history.');
   };
+
+  // Target Grade numerical and letter resolution
+  const targetGradeNum = useMemo(() => {
+    const val = parseNumber(targetGrade);
+    return targetGrade.trim() !== '' && !isNaN(val) && val > 0 ? val : null;
+  }, [targetGrade]);
+
+  const targetLetter = useMemo(() => {
+    if (targetGradeNum === null) return '';
+    return getLetterFromPercent(targetGradeNum, scale);
+  }, [targetGradeNum, scale]);
 
   // Live what-if score calculation
   const whatIfResult = useMemo(() => {
@@ -217,27 +252,90 @@ export const GradeCalculator: React.FC<GradeCalculatorProps> = ({ setToast }) =>
       whatIfEarned === '' ||
       whatIfPossible === '' ||
       possibleVal <= 0 ||
-      earnedVal < 0 ||
-      earnedVal > possibleVal
+      earnedVal < 0
     ) {
       return null;
     }
 
     const tempItem: ValidatedAssessment = {
       id: 999999,
-      name: 'What if',
+      name: upcomingName.trim() || 'Upcoming',
       score: whatIfEarned,
       max: whatIfPossible,
       weight: whatIfWeight,
       scoreNum: earnedVal,
       maxNum: possibleVal,
-      weightNum: weightVal,
+      weightNum: weightVal > 0 ? weightVal : 1,
       invalid: false,
     };
 
     const validExisting = validatedAssessments.filter((item) => !item.invalid);
     return calculateResult([...validExisting, tempItem]);
-  }, [whatIfEarned, whatIfPossible, whatIfWeight, mode, validatedAssessments]);
+  }, [whatIfEarned, whatIfPossible, whatIfWeight, upcomingName, mode, validatedAssessments]);
+
+  // Impact delta compared to current base grade
+  const impactDelta = useMemo(() => {
+    if (whatIfResult === null) return null;
+    return Number((whatIfResult - currentGrade.percent).toFixed(1));
+  }, [whatIfResult, currentGrade.percent]);
+
+  // Comparison to target grade
+  const targetComparison = useMemo(() => {
+    if (whatIfResult === null || targetGradeNum === null) return null;
+    const gap = Number((whatIfResult - targetGradeNum).toFixed(1));
+    const isMet = whatIfResult >= targetGradeNum;
+    return { gap, isMet };
+  }, [whatIfResult, targetGradeNum]);
+
+  // Required score on upcoming assignment to reach target grade
+  const requiredScoreAdvice = useMemo(() => {
+    if (targetGradeNum === null) return null;
+    const possibleVal = parseNumber(whatIfPossible);
+    if (whatIfPossible === '' || possibleVal <= 0) return null;
+
+    const validExisting = validatedAssessments.filter((item) => !item.invalid);
+    if (!validExisting.length) return null;
+    const targetFraction = targetGradeNum / 100;
+
+    let neededScore = 0;
+    let neededPercent = 0;
+
+    if (mode === 'weighted') {
+      const weightVal = parseNumber(whatIfWeight);
+      if (whatIfWeight === '' || weightVal <= 0) return null;
+
+      const totalWeight = validExisting.reduce((acc, curr) => acc + curr.weightNum, 0);
+      const weightedSum = validExisting.reduce(
+        (acc, curr) => acc + (curr.scoreNum / curr.maxNum) * curr.weightNum,
+        0
+      );
+
+      // (weightedSum + (neededScore / possibleVal) * weightVal) / (totalWeight + weightVal) = targetFraction
+      const neededFraction = (targetFraction * (totalWeight + weightVal) - weightedSum) / weightVal;
+      neededScore = neededFraction * possibleVal;
+      neededPercent = neededFraction * 100;
+    } else {
+      const totalEarned = validExisting.reduce((acc, curr) => acc + curr.scoreNum, 0);
+      const totalPossible = validExisting.reduce((acc, curr) => acc + curr.maxNum, 0);
+
+      neededScore = targetFraction * (totalPossible + possibleVal) - totalEarned;
+      neededPercent = (neededScore / possibleVal) * 100;
+    }
+
+    const shortSummary =
+      neededScore <= 0
+        ? `Target ${targetGradeNum}% already secured`
+        : `${neededScore.toFixed(1)} / ${possibleVal} (${neededPercent.toFixed(1)}%)`;
+
+    return {
+      neededScore,
+      neededPercent,
+      possibleVal,
+      alreadyAchieved: neededScore <= 0,
+      extraCreditNeeded: neededScore > possibleVal,
+      shortSummary,
+    };
+  }, [targetGradeNum, whatIfPossible, whatIfWeight, mode, validatedAssessments]);
 
   const handleCopyGrade = async () => {
     try {
@@ -282,6 +380,7 @@ export const GradeCalculator: React.FC<GradeCalculatorProps> = ({ setToast }) =>
         scale,
         percent: currentGrade.percent,
         letter: currentLetter,
+        targetGrade: targetGradeNum !== null ? String(targetGradeNum) : undefined,
         assessments: validatedAssessments,
         whatIf:
           whatIfResult !== null
@@ -291,6 +390,9 @@ export const GradeCalculator: React.FC<GradeCalculatorProps> = ({ setToast }) =>
                 weight: mode === 'weighted' ? whatIfWeight : undefined,
                 projectedPercent: whatIfResult,
                 projectedLetter: getLetterFromPercent(whatIfResult, scale),
+                targetGrade: targetGradeNum !== null ? String(targetGradeNum) : undefined,
+                impactDelta: impactDelta !== null ? impactDelta : undefined,
+                neededScore: requiredScoreAdvice ? requiredScoreAdvice.shortSummary : undefined,
               }
             : null,
       });
@@ -460,29 +562,72 @@ export const GradeCalculator: React.FC<GradeCalculatorProps> = ({ setToast }) =>
           <div className="result-panel">
             <div className="result-kicker">Current grade</div>
             <div className="result-percent">
-              {currentGrade.percent.toFixed(1)}
+              <AnimatedCounter value={currentGrade.percent} decimals={1} duration={350} />
               <span>%</span>
             </div>
 
             <div className="result-letter">
-              <span>{currentLetter}</span> {getGradeRemark(currentGrade.percent)}
+              <span className="result-letter-badge">
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={currentLetter}
+                    initial={{ opacity: 0, y: -4, scale: 0.92 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 4, scale: 0.92 }}
+                    transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    {currentLetter}
+                  </motion.span>
+                </AnimatePresence>
+              </span>
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={currentLetter}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {getGradeRemark(currentGrade.percent)}
+                </motion.span>
+              </AnimatePresence>
             </div>
 
             <p className="result-message">
               This is your {mode === 'weighted' ? 'weighted' : 'points'} view of the assessments above. Change a score or add an item, then calculate again.
             </p>
 
-            <div className="progress-track">
+            <div className="progress-track" style={{ position: 'relative' }}>
               <div
                 className="progress-fill"
                 style={{
                   width: `${Math.min(100, Math.max(0, currentGrade.percent))}%`,
                 }}
               />
+              {targetGradeNum !== null && targetGradeNum >= 0 && targetGradeNum <= 100 && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '-2px',
+                    bottom: '-2px',
+                    left: `${targetGradeNum}%`,
+                    width: '2px',
+                    background: '#f59e0b',
+                    zIndex: 2,
+                    boxShadow: '0 0 4px rgba(245, 158, 11, 0.7)',
+                  }}
+                  title={`Target: ${targetGradeNum}%`}
+                />
+              )}
             </div>
 
             <div className="result-meta">
-              <span>0</span>
+              <span>0%</span>
+              {targetGradeNum !== null && (
+                <span style={{ color: 'hsl(var(--foreground))', fontWeight: 600 }}>
+                  Target: {targetGradeNum}% ({targetLetter})
+                </span>
+              )}
               <span>100%</span>
             </div>
 
@@ -550,62 +695,340 @@ export const GradeCalculator: React.FC<GradeCalculatorProps> = ({ setToast }) =>
             </div>
           </div>
 
-          {/* What-If Card */}
-          <div className="what-if">
-            <div className="what-if-head">
-              <div className="what-if-title">Try a what-if score</div>
-              <span className="what-if-badge">Explore</span>
-            </div>
-            <p className="what-if-copy">
-              Add one hypothetical assessment to see where your average could land.
-            </p>
-
-            <div className="what-if-fields">
-              <input
-                className="field-input"
-                type="number"
-                inputMode="decimal"
-                min="0"
-                value={whatIfEarned}
-                onChange={(e) => setWhatIfEarned(e.target.value)}
-                placeholder="Earned"
-                aria-label="What-if points earned"
-              />
-              <input
-                className="field-input"
-                type="number"
-                inputMode="decimal"
-                min="1"
-                value={whatIfPossible}
-                onChange={(e) => setWhatIfPossible(e.target.value)}
-                placeholder="Possible"
-                aria-label="What-if points possible"
-              />
+          {/* Target Grade & Upcoming Assignment Simulator */}
+          <div className="target-simulator-card" aria-label="Target Grade and Upcoming Assignment Simulator">
+            <div className="target-simulator-head">
+              <div>
+                <div className="target-simulator-title">
+                  <Target style={{ width: 17, height: 17, color: 'hsl(var(--tool-primary))' }} aria-hidden="true" />
+                  <span>Target Grade & Upcoming Assignment</span>
+                </div>
+                <p className="what-if-copy" style={{ margin: '4px 0 0' }}>
+                  Set your desired final grade and test how a hypothetical score on an upcoming test or assignment impacts your cumulative grade.
+                </p>
+              </div>
+              <span className="target-simulator-badge">Simulator</span>
             </div>
 
-            {mode === 'weighted' && (
-              <input
-                className="field-input"
-                type="number"
-                inputMode="decimal"
-                min="1"
-                value={whatIfWeight}
-                onChange={(e) => setWhatIfWeight(e.target.value)}
-                placeholder="Weight"
-                aria-label="What-if weight"
-                style={{ marginTop: 8 }}
-              />
-            )}
+            {/* Target Grade Section */}
+            <div className="target-input-section">
+              <div className="target-label-row">
+                <label htmlFor="target-grade-input" className="target-label">
+                  <Target style={{ width: 13, height: 13, color: 'hsl(var(--tool-primary))' }} aria-hidden="true" />
+                  Target Final Grade
+                </label>
+                {targetGradeNum !== null && (
+                  <span className="target-letter-badge">
+                    Goal: {targetGradeNum}% ({targetLetter})
+                  </span>
+                )}
+              </div>
 
-            <div className="what-if-result">
-              <strong>
-                {whatIfResult === null ? '—' : `${whatIfResult.toFixed(1)}%`}
-              </strong>
-              <span>
-                {whatIfResult === null
-                  ? 'Enter a valid score'
-                  : `would be a ${getLetterFromPercent(whatIfResult, scale)}`}
-              </span>
+              <div className="target-input-wrap">
+                <input
+                  id="target-grade-input"
+                  className="target-input-field"
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  max="150"
+                  step="0.5"
+                  value={targetGrade}
+                  onChange={(e) => setTargetGrade(e.target.value)}
+                  placeholder="e.g. 90"
+                  aria-label="Target final grade percentage"
+                />
+                <span className="target-input-unit">%</span>
+              </div>
+
+              <div className="target-presets-row">
+                {TARGET_PRESETS.map((preset) => (
+                  <button
+                    key={preset.value}
+                    type="button"
+                    className="target-preset-chip"
+                    data-active={targetGrade === preset.value}
+                    onClick={() => setTargetGrade(preset.value)}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Upcoming Assignment Inputs */}
+            <div className="upcoming-section">
+              <div>
+                <label htmlFor="upcoming-name-input" className="upcoming-label">
+                  Upcoming Assessment Name
+                </label>
+                <input
+                  id="upcoming-name-input"
+                  className="field-input"
+                  value={upcomingName}
+                  onChange={(e) => setUpcomingName(e.target.value)}
+                  placeholder="e.g. Final Exam, Essay 3"
+                  aria-label="Upcoming assessment name"
+                />
+              </div>
+
+              <div className="upcoming-fields-grid">
+                <div>
+                  <label htmlFor="what-if-earned" className="upcoming-label">
+                    Hypothetical Earned
+                  </label>
+                  <input
+                    id="what-if-earned"
+                    className="field-input"
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    value={whatIfEarned}
+                    onChange={(e) => setWhatIfEarned(e.target.value)}
+                    placeholder="Earned"
+                    aria-label="Hypothetical points earned"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="what-if-possible" className="upcoming-label">
+                    Total Possible
+                  </label>
+                  <input
+                    id="what-if-possible"
+                    className="field-input"
+                    type="number"
+                    inputMode="decimal"
+                    min="1"
+                    value={whatIfPossible}
+                    onChange={(e) => setWhatIfPossible(e.target.value)}
+                    placeholder="Possible"
+                    aria-label="Hypothetical points possible"
+                  />
+                </div>
+              </div>
+
+              {mode === 'weighted' && (
+                <div>
+                  <label htmlFor="what-if-weight" className="upcoming-label">
+                    Assignment Weight / Share
+                  </label>
+                  <input
+                    id="what-if-weight"
+                    className="field-input"
+                    type="number"
+                    inputMode="decimal"
+                    min="1"
+                    value={whatIfWeight}
+                    onChange={(e) => setWhatIfWeight(e.target.value)}
+                    placeholder="e.g. 20"
+                    aria-label="Hypothetical assignment weight"
+                  />
+                </div>
+              )}
+
+              {/* Interactive Score Slider */}
+              {parseNumber(whatIfPossible) > 0 && (
+                <div className="slider-control-group">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '11px', color: 'hsl(var(--muted-foreground))' }}>
+                      Adjust hypothetical score
+                    </span>
+                    <span className="slider-pct-tag">
+                      {parseNumber(whatIfPossible) > 0 ? (
+                        <>
+                          <AnimatedCounter
+                            value={(parseNumber(whatIfEarned) / parseNumber(whatIfPossible)) * 100}
+                            decimals={0}
+                            duration={160}
+                          />
+                          %
+                        </>
+                      ) : (
+                        ''
+                      )}
+                    </span>
+                  </div>
+                  <div className="slider-track-wrap">
+                    <input
+                      type="range"
+                      className="score-range-slider"
+                      min="0"
+                      max={Math.max(parseNumber(whatIfPossible), 10)}
+                      step="0.5"
+                      value={parseNumber(whatIfEarned) || 0}
+                      onChange={(e) => setWhatIfEarned(e.target.value)}
+                      aria-label="Score adjustment slider"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Live Simulation & Impact Results */}
+            <div className="simulation-results-box">
+              <div className="projected-grade-row">
+                <div>
+                  <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'hsl(var(--muted-foreground))', fontFamily: 'var(--app-font-mono)' }}>
+                    Projected Final Grade
+                  </div>
+                  <div className="projected-grade-val">
+                    <span className="projected-percent-number">
+                      {whatIfResult === null ? (
+                        '—'
+                      ) : (
+                        <>
+                          <AnimatedCounter value={whatIfResult} decimals={1} duration={300} />
+                          <span style={{ fontSize: '18px', marginLeft: '2px', opacity: 0.85 }}>%</span>
+                        </>
+                      )}
+                    </span>
+                    {whatIfResult !== null && (
+                      <span className="projected-letter-tag">
+                        <AnimatePresence mode="wait">
+                          <motion.span
+                            key={getLetterFromPercent(whatIfResult, scale)}
+                            initial={{ opacity: 0, scale: 0.88 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.88 }}
+                            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                          >
+                            {getLetterFromPercent(whatIfResult, scale)}
+                          </motion.span>
+                        </AnimatePresence>
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {impactDelta !== null && (
+                  <motion.div
+                    key={`delta-${impactDelta > 0 ? 'pos' : impactDelta < 0 ? 'neg' : 'neu'}`}
+                    initial={{ opacity: 0.75, scale: 0.94 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                    className={`impact-delta-tag ${
+                      impactDelta > 0
+                        ? 'impact-positive'
+                        : impactDelta < 0
+                        ? 'impact-negative'
+                        : 'impact-neutral'
+                    }`}
+                    title={`Current: ${currentGrade.percent.toFixed(1)}% → Projected: ${whatIfResult?.toFixed(1)}%`}
+                  >
+                    {impactDelta > 0 ? (
+                      <TrendingUp style={{ width: 14, height: 14 }} aria-hidden="true" />
+                    ) : impactDelta < 0 ? (
+                      <TrendingDown style={{ width: 14, height: 14 }} aria-hidden="true" />
+                    ) : null}
+                    <span>
+                      {impactDelta > 0 ? '+' : ''}
+                      <AnimatedCounter value={impactDelta} decimals={1} duration={250} />%
+                    </span>
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Impact Narrative */}
+              {impactDelta !== null && whatIfResult !== null && (
+                <div style={{ fontSize: '11.5px', color: 'hsl(var(--muted-foreground))', lineHeight: 1.4 }}>
+                  {impactDelta > 0 ? (
+                    <>
+                      This score raises your cumulative grade by <strong style={{ color: 'hsl(var(--foreground))' }}>+{impactDelta.toFixed(1)}%</strong> (from {currentGrade.percent.toFixed(1)}% to {whatIfResult.toFixed(1)}%).
+                    </>
+                  ) : impactDelta < 0 ? (
+                    <>
+                      This score lowers your cumulative grade by <strong style={{ color: 'hsl(var(--foreground))' }}>{impactDelta.toFixed(1)}%</strong> (from {currentGrade.percent.toFixed(1)}% to {whatIfResult.toFixed(1)}%).
+                    </>
+                  ) : (
+                    <>
+                      This score matches your current standing and keeps your cumulative average at {currentGrade.percent.toFixed(1)}%.
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Target Comparison Feedback */}
+              {targetComparison !== null && targetGradeNum !== null && (
+                <div
+                  className={`target-feedback-box ${
+                    targetComparison.isMet ? 'target-feedback-success' : 'target-feedback-warning'
+                  }`}
+                >
+                  {targetComparison.isMet ? (
+                    <CheckCircle2 style={{ width: 16, height: 16, flexShrink: 0, marginTop: 1 }} aria-hidden="true" />
+                  ) : (
+                    <AlertCircle style={{ width: 16, height: 16, flexShrink: 0, marginTop: 1 }} aria-hidden="true" />
+                  )}
+                  <div>
+                    {targetComparison.isMet ? (
+                      <>
+                        <strong>Target Achieved!</strong> With this score, your projected grade ({whatIfResult?.toFixed(1)}%) meets or exceeds your {targetGradeNum}% ({targetLetter}) goal by +{targetComparison.gap.toFixed(1)}%.
+                      </>
+                    ) : (
+                      <>
+                        <strong>Below Target:</strong> With this score, your projected grade ({whatIfResult?.toFixed(1)}%) is {Math.abs(targetComparison.gap).toFixed(1)}% below your {targetGradeNum}% ({targetLetter}) goal.
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Score Needed Solver */}
+              {requiredScoreAdvice !== null && targetGradeNum !== null && (
+                <div className="target-needed-text">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: 2, fontWeight: 700, color: 'hsl(var(--foreground))' }}>
+                    <Target style={{ width: 12, height: 12, color: 'hsl(var(--tool-primary))' }} aria-hidden="true" />
+                    <span>Target Score Requirement:</span>
+                  </div>
+                  {requiredScoreAdvice.alreadyAchieved ? (
+                    <span>
+                      You have already secured your target grade of <strong>{targetGradeNum}%</strong>. Even with 0 points on this assignment, your cumulative average remains above your goal.
+                    </span>
+                  ) : requiredScoreAdvice.extraCreditNeeded ? (
+                    <span>
+                      Reaching your <strong>{targetGradeNum}% ({targetLetter})</strong> target requires at least <strong>{requiredScoreAdvice.neededScore.toFixed(1)} / {requiredScoreAdvice.possibleVal} ({requiredScoreAdvice.neededPercent.toFixed(1)}%)</strong> on this assignment (extra credit required).
+                    </span>
+                  ) : (
+                    <span>
+                      To achieve your <strong>{targetGradeNum}% ({targetLetter})</strong> target, you need at least <strong>{requiredScoreAdvice.neededScore.toFixed(1)} / {requiredScoreAdvice.possibleVal} ({requiredScoreAdvice.neededPercent.toFixed(1)}%)</strong> on this assignment.
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Visual Comparison Bar */}
+              {whatIfResult !== null && (
+                <div className="comparison-bar-wrap">
+                  <div className="comparison-track">
+                    <div
+                      className="comparison-fill-current"
+                      style={{ width: `${Math.min(100, Math.max(0, currentGrade.percent))}%` }}
+                      title={`Current grade: ${currentGrade.percent.toFixed(1)}%`}
+                    />
+                    <div
+                      className="comparison-fill-projected"
+                      style={{ width: `${Math.min(100, Math.max(0, whatIfResult))}%` }}
+                      title={`Projected grade: ${whatIfResult.toFixed(1)}%`}
+                    />
+                    {targetGradeNum !== null && targetGradeNum >= 0 && targetGradeNum <= 100 && (
+                      <div
+                        className="comparison-target-needle"
+                        style={{ left: `${targetGradeNum}%` }}
+                        title={`Target: ${targetGradeNum}%`}
+                      />
+                    )}
+                  </div>
+                  <div className="comparison-labels-row">
+                    <span>Current: {currentGrade.percent.toFixed(1)}%</span>
+                    <span>Projected: {whatIfResult.toFixed(1)}%</span>
+                    {targetGradeNum !== null && (
+                      <span style={{ color: '#d97706', fontWeight: 600 }}>
+                        Target: {targetGradeNum}%
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

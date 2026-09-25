@@ -9,6 +9,7 @@ interface GradeReportOptions {
   scale: 'standard' | 'plus';
   percent: number;
   letter: string;
+  targetGrade?: string | number;
   assessments: ValidatedAssessment[];
   whatIf?: {
     earned: string;
@@ -16,6 +17,9 @@ interface GradeReportOptions {
     weight?: string;
     projectedPercent: number;
     projectedLetter: string;
+    targetGrade?: string;
+    impactDelta?: number;
+    neededScore?: string;
   } | null;
 }
 
@@ -228,30 +232,42 @@ export function exportGradeReportPdf(data: GradeReportOptions): void {
 
   y += 14;
 
-  // What-If Scenario (if tested)
+  // What-If & Target Grade Simulation (if tested)
   if (data.whatIf) {
-    doc.setFillColor(254, 243, 199); // amber soft
-    doc.setDrawColor(217, 119, 6);
+    const boxHeight = data.whatIf.targetGrade || data.whatIf.neededScore ? 19 : 14;
+    doc.setFillColor(240, 253, 250); // soft teal/neutral
+    doc.setDrawColor(45, 140, 126);
     doc.setLineWidth(0.4);
-    doc.roundedRect(margin, y, contentWidth, 14, 2, 2, 'FD');
+    doc.roundedRect(margin, y, contentWidth, boxHeight, 2, 2, 'FD');
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
-    doc.setTextColor(180, 83, 9);
-    doc.text('WHAT-IF PROJECTION SIMULATION:', margin + 6, y + 5.5);
+    doc.setTextColor(31, 89, 80);
+    const targetTag = data.whatIf.targetGrade ? ` (Target Goal: ${data.whatIf.targetGrade}%)` : '';
+    doc.text(`UPCOMING ASSIGNMENT & TARGET GRADE SIMULATION${targetTag}:`, margin + 6, y + 5.5);
 
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(120, 53, 15);
+    doc.setTextColor(15, 23, 42);
     const whatIfWeightPart = data.mode === 'weighted' && data.whatIf.weight
       ? ` (Weight: ${data.whatIf.weight})`
       : '';
+    const deltaText = data.whatIf.impactDelta !== undefined
+      ? ` [Impact: ${data.whatIf.impactDelta >= 0 ? '+' : ''}${data.whatIf.impactDelta.toFixed(1)}%]`
+      : '';
     doc.text(
-      `Hypothetical assessment with ${data.whatIf.earned}/${data.whatIf.possible} points${whatIfWeightPart} would bring the cumulative grade to ${data.whatIf.projectedPercent.toFixed(1)}% (${data.whatIf.projectedLetter}).`,
+      `Hypothetical score of ${data.whatIf.earned}/${data.whatIf.possible} points${whatIfWeightPart} yields projected final grade of ${data.whatIf.projectedPercent.toFixed(1)}% (${data.whatIf.projectedLetter})${deltaText}.`,
       margin + 6,
       y + 10.5
     );
 
-    y += 19;
+    if (data.whatIf.neededScore) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(31, 89, 80);
+      doc.text(`Required to achieve target: ${data.whatIf.neededScore}`, margin + 6, y + 15.5);
+    }
+
+    y += boxHeight + 5;
   }
 
   // Grading Scale Reference Table
