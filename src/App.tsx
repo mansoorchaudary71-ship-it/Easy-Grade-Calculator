@@ -143,7 +143,7 @@ function AppMain() {
         </div>
 
         <Suspense fallback={null}>
-          <EducationalGuide />
+          <EducationalGuide activeTool={activeTool} />
         </Suspense>
       </main>
 
